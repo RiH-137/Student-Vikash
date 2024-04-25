@@ -241,6 +241,123 @@ def invoice_extractor_page():
         else:
             st.error("Please upload the invoice image")
 
+#====  ======================================================================================================================
+def img_to_text():
+
+    def get_gemini_repsonse(input,image,prompt):
+        model12=genai.GenerativeModel('gemini-pro-vision')
+        response=model12.generate_content([input,image[0],prompt])
+        return response.text
+
+
+
+
+    #conversion of image data to bytes
+    def input_image_for_text(uploaded_file):
+        # Check if a file has been uploaded
+        if uploaded_file is not None:
+            # Read the file into bytes
+            bytes_data = uploaded_file.getvalue()  # Read the file into bytes
+
+            image_parts = [
+                {
+                    "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
+                    "data": bytes_data
+                }
+            ]
+            return image_parts
+        else:
+            raise FileNotFoundError("No file uploaded")
+        
+
+    st.header("Image to Text Converter 📷")
+    input=st.text_input("Enter any query.... ",key="input")
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    image=""   
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image.", use_column_width=True)
+
+
+    submit=st.button("Convert it into text....")
+
+    input_prompt="""
+    Here use may upload handwritten or computer typed text image and you have to convert the text from the image to the text.
+    and you have to provide the details of the text in the form of the text.
+    and you have to return the text in the form of the text.
+                ----
+                ----
+
+
+    """
+
+    ## If submit button is clicked
+
+    if submit:
+        if uploaded_file:
+            image_data=input_image_for_text(uploaded_file)
+            response=get_gemini_repsonse(input_prompt,image_data,input)
+            st.subheader("The Response is")
+            st.write(response)
+        else:
+            st.write("Please upload the image to get the response, as the image is not uploaded.")
+#=====================================================================================================================
+def pic_comparison():
+
+    def get_gemini_response(input_prompt, image_data, caption_prompt="", hashtag_prompt=""):
+        """
+        Calls the GenAI model to analyze images and generate recommendations.
+
+        Args:
+            input_prompt: String containing the initial prompt for GenAI.
+            image_data: List containing two PIL Image objects.
+            caption_prompt: Optional string prompt for generating captions (default "").
+            hashtag_prompt: Optional string prompt for generating hashtags (default "").
+
+        Returns:
+            String containing the GenAI response, including analysis and recommendations.
+        """
+
+        model5 = genai.GenerativeModel('gemini-pro-vision')
+        combined_prompt = input_prompt + caption_prompt + hashtag_prompt
+        response = model5.generate_content([combined_prompt] + image_data)
+        return response.text
+
+    st.header("Which picture is best for Instagram?")
+
+    uploaded_file1 = st.file_uploader("Choose the first image...", type=["jpg", "jpeg", "png"])
+    image1 = None
+    if uploaded_file1 is not None:
+        image1 = Image.open(uploaded_file1)
+        st.image(image1, caption="First Uploaded Image", use_column_width=True)
+
+    uploaded_file2 = st.file_uploader("Choose the second image...", type=["jpg", "jpeg", "png"])
+    image2 = None
+    if uploaded_file2 is not None:
+        image2 = Image.open(uploaded_file2)
+        st.image(image2, caption="Second Uploaded Image", use_column_width=True)
+    input_prompt = """ You are an expert in the fashion industry and you are a great fashion influence. You have been given two images as input and you have to 
+  give a description of both the images and you have to tell which image is best and why for the Instagram post with the 
+  good caption and the best suited hashtags."""
+    submit_button = st.button("Compare Pictures")
+
+    if submit_button:
+        if uploaded_file1 and uploaded_file2:
+            image_data = [image1, image2]
+
+            # Separate prompts for better control over caption & hashtag generation
+            caption_prompt = """
+                Here are some caption ideas for the image:
+            """
+            hashtag_prompt = """
+                Here are some hashtag suggestions for the image:
+            """
+
+            response = get_gemini_response(input_prompt, image_data, caption_prompt, hashtag_prompt)
+            st.subheader("GenAI Response:")
+            st.write(response)
+
+
 
 #=====================================================================================================================
 # Page: Meal Detail
@@ -308,6 +425,146 @@ def meal_detail_page():
             st.write("Please upload the image to get the response, as the image is not uploaded.")
 
 
+#=====================================================================================================================
+def outfit_maker_page():
+    def get_gemini_repsonse(input,image,prompt):
+        model10=genai.GenerativeModel('gemini-pro-vision')
+        response=model10.generate_content([input,image[0],prompt])
+        return response.text
+
+
+
+
+    #conversion of image data to bytes
+    def input_image_setup(uploaded_file):
+        # Check if a file has been uploaded
+        if uploaded_file is not None:
+            # Read the file into bytes
+            bytes_data = uploaded_file.getvalue()  # Read the file into bytes
+
+            image_parts = [
+                {
+                    "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
+                    "data": bytes_data
+                }
+            ]
+            return image_parts
+        else:
+            raise FileNotFoundError("No file uploaded")
+
+    st.header("Outfit Maker 👕")
+    input=st.radio("Choose the input type",["Male", "Female", "Kid"])
+    input=st.text_input("Enter the outfit related query.... ",key="input")
+    uploaded_file = st.file_uploader("Choose an image that constains you outfit (like top + bottom + footwear + other accessories. )...", type=["jpg", "jpeg", "png"])
+    image=""   
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image.", use_column_width=True)
+
+
+    submit=st.button("Tell me about it....")
+
+    input_prompt="""
+
+    You are an expert in fashion industry and you are a great fashion infuence where you need to see the outfit from the image and recommend the best suited color of pants with different shirts or foowears other other dress of men and womer in the image.
+    You also have to provide the details of every outfit items with the color and brand of the outfit.
+    Also you give the score to the outfit based on the color combination and the brand of the outfit out of 10.
+    Use may enter the input section and may ask some questions related to outfit then you have to answer all of them..
+    Also you have to recommend the improvement for the outfit.
+    Also you have to response to the user query in the form of the outfit details.
+    you have to generate all the responses in the form of 
+    if you found top then you have to provide the details of the top with color, brand, score and recommended for improvement.
+    1. Item 1 - color - brand - score - recommended for improvement
+    if you found bottom then you have to provide the details of the top with color, brand, score and recommended for improvement.
+    2. Item 2 - color - brand - score - recommended for improvement     
+    if you found footwear then you have to provide the details of the top with color, brand, score and recommended for improvement.
+    3. Item 3 - color - brand - score - recommended for improvement
+    if you found other accessories like watches jewellery etc then you have to provide the details of the top with color, brand, score and recommended for improvement.
+    4. Item 4 - color - brand - score - recommended for improvement
+    ----
+    ----        
+    And at last you have to give the overall score of the outfit based on the color combination and the brand of the outfit out of 10.
+    And the best place suited for the clothing eg., wedding party, office, casual etc.
+
+    """
+
+    ## If submit button is clicked
+
+    if submit:
+        if uploaded_file:
+            image_data=input_image_setup(uploaded_file)
+            response=get_gemini_repsonse(input_prompt,image_data,input)
+            st.subheader("The Response is")
+            st.write(response)
+        else:
+            st.write("Please upload the image to get the response, as the image is not uploaded.")
+
+#=====================================================================================================================
+def aesthetic_rating_page():
+    def get_gemini_repsonse(input,image,prompt):
+        model11=genai.GenerativeModel('gemini-pro-vision')
+        response=model11.generate_content([input,image[0],prompt])
+        return response.text
+    
+
+    #conversion of image data to bytes
+    def input_image_setup(uploaded_file):
+        # Check if a file has been uploaded
+        if uploaded_file is not None:
+            # Read the file into bytes
+            bytes_data = uploaded_file.getvalue()  # Read the file into bytes
+
+            image_parts = [
+                {
+                    "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
+                    "data": bytes_data
+                }
+            ]
+            return image_parts
+        else:
+            raise FileNotFoundError("No file uploaded")
+
+    st.header("Aesthetic Rating 🦸‍♀️")
+    input=st.radio("Choose the input type",["Male", "Female", "Kid"])
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    image=""   
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image.", use_column_width=True)
+
+
+    submit=st.button("Tell me about it....")
+
+    input_prompt="""
+
+    You are an expert in fashion industry and you are a great fashion infuence, instagram fashion influence and a great model where you need to see the outfit, model pose, background, aestheticeness from the image and recommend the best pose with different outfits and other environments and backgrounds other dress of men or womer in the image.
+    You also have to give the different pose for the model.
+    You also have to give the different background for the model image.
+    You also have to give the different image filters for the model image.
+    You also have to give the different camera angles for the model image.
+    You also have to give the different dress for the model image.
+    Also you have to response to the user query in the form of the aesthiticness.
+    you have to generate all the responses in the form of 
+    
+    pose - backgrounf of the image - filter - environment- outfit- style - aestheticness score on the scale of 1 to 10 - is this photo good to upload on instagram or any other social media platform Yes/No (percentage).
+    
+    ----
+    ----        
+    At last of you have to tell how can model his her photoshoot image and aesthetic image eg., wedding party, office, casual etc.
+
+    """
+
+    ## If submit button is clicked
+
+    if submit:
+        if uploaded_file:
+            image_data=input_image_setup(uploaded_file)
+            response=get_gemini_repsonse(input_prompt,image_data,input)
+            st.subheader("The Response is")
+            st.write(response)
+        else:
+            st.write("Please upload the image to get the response, as the image is not uploaded.")
+#=====================================================================================================================
 
 
 #=====================================================================================================================  
@@ -468,10 +725,14 @@ pages = {
     "Chintu GPT": chintu_gpt_page,
     "Chintu GPT V2": chintu_gpt_v2_page,
     "PDF se Padhai": pdf_study_page,
+    "Image to Text": img_to_text,
     "Invoice Extractor": invoice_extractor_page,
     "Meal Detail": meal_detail_page,
     "ATS Score Check": ats_score_check_page,
     "YouTube se Padhai": youtube_study_page,
+    "Outfit Maker": outfit_maker_page,
+    "Aesthetic Rating": aesthetic_rating_page,
+    "Pic Comparision": pic_comparison,
     "About the Author": about_the_author,
 }
 
