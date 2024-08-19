@@ -7,6 +7,8 @@ import os
 import google.generativeai as genai
 import json
 import textwrap
+import faiss_index
+import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 from langchain.vectorstores import FAISS
