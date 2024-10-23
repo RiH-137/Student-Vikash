@@ -7,18 +7,19 @@ import os
 import google.generativeai as genai
 import json
 import textwrap
-import faiss_index
-import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 from langchain.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
+
 from dotenv import load_dotenv
 import PyPDF2 as pdf
 from dotenv import load_dotenv
 import json
+
+
 
 
 # Load environment variables
@@ -26,7 +27,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure Google API
-genai.configure(api_key=os.getenv("AIzaSyAuF9JV-K8itWWmFpUeBemwR3jdls4-1kg"))
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Page: Chintu GPT
 ## function to load Gemini Pro model and get repsonses
@@ -67,9 +68,14 @@ def chintu_gpt_page():
 
 #========================================================================================================
 # Page: Chintu GPT V2
+import streamlit as st
+from PIL import Image
+import google.generativeai as genai
+
 def chintu_gpt_v2_page():
     def get_gemini_response(input, image):
-        model2 = genai.GenerativeModel("gemini-pro-vision")
+        # Update the model to the new version "gemini-1.5-flash"
+        model2 = genai.GenerativeModel("gemini-1.5-flash")
         if input != "":
             response = model2.generate_content([input, image])
         else:
@@ -78,9 +84,11 @@ def chintu_gpt_v2_page():
     
     st.header("Chintu GPT V2  📷")
     st.text("Chintu GPT V2 can support image along with text input.")
-    st.text(" Ask any question in English, Hinglish, German, Telegu-English etc. and get the answer.")
+    st.text(" Ask any question in English, Hinglish, German, Telugu-English, etc. and get the answer.")
+    
     input = st.text_input("Ask the sawal...", key="input")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    
     image = ""
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
@@ -94,73 +102,123 @@ def chintu_gpt_v2_page():
             st.subheader("Generated jawaab....")
             st.write(response)
         else:
-            st.write("Please enter a question and select image....")
+            st.write("Please enter a question and select an image....")
+#======================================================================================================================
+
+## debugger
+import streamlit as st
+import google.generativeai as genai
+
+def debugger_page():
+    # Function to process the code and error and generate a response
+    def get_debugger_response(code, error):
+        # Update the model to a version like "gemini-1.5-flash" or another generative AI
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        if code and error:
+            prompt = f"Here is the code: \n{code}\nAnd here is the error:\n{error}\nPlease provide debugging suggestions."
+        elif code:
+            prompt = f"Here is the code: \n{code}\nPlease identify any potential issues or improvements."
+        else:
+            prompt = f"Here is the error: \n{error}\nPlease provide suggestions on how to fix it."
+        
+        # Generate the response based on the prompt
+        response = model.generate_content([prompt])
+        return response.text
+    
+    st.header("Code Debugger 🐞")
+    st.text("Paste your code and error below to get debugging help.")
+
+    # Input box for the code
+    code_input = st.text_area("Paste the code here...", height=200)
+
+    # Input box for the error message
+    error_input = st.text_area("Paste the error message here...", height=100)
+
+    # Submit button to trigger the debug process
+    submit = st.button("Debug")
+
+    # Handle the debug request when submit is clicked
+    if submit:
+        if code_input or error_input:
+            response = get_debugger_response(code_input, error_input)
+            st.subheader("Debugger Output")
+            st.write(response)
+        else:
+            st.write("Please provide either code or an error message to proceed.")
+
 #=================`=======================================================================================================
+## PDF se padhai
 
 
-# Page: PDF se Padhai
+import streamlit as st
+from PyPDF2 import PdfReader
+from langchain.chains.question_answering import load_qa_chain
+from langchain.prompts import PromptTemplate
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+# from langchain.llms.google_genai import ChatGoogleGenerativeAI  # Import ChatGoogleGenerativeAI
+
+
 def pdf_study_page():
-    #extract the text from the pdf
+    # Extract the text from the PDF
     def get_pdf_text(pdf_docs):
-        text=""
+        text = ""
         for pdf in pdf_docs:
-            pdf_reader= PdfReader(pdf)
-            for page in pdf_reader.pages:
-                text=text+page.extract_text()
-        return  text
+            try:
+                pdf_reader = PdfReader(pdf)  # File-like object from Streamlit's file_uploader
+                for page in pdf_reader.pages:
+                    text += page.extract_text()
+            except Exception as e:
+                st.error(f"Error reading PDF: {e}")
+        return text
 
-
-    #convert the text into chunks
+    # Convert the text into chunks
     def get_text_chunks(text):
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
         chunks = text_splitter.split_text(text)
         return chunks
 
-    #store the vectors
-    #embeddings are used to convert the text into vectors
+    # Store the vectors (embeddings are used to convert the text into vectors)
     def get_vector_store(text_chunks):
-        embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
-        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-        vector_store.save_local("faiss_index")
+        try:
+            embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+            vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+            vector_store.save_local("faiss_index")
+        except Exception as e:
+            st.error(f"Error in vector store processing: {e}")
 
-
+    # Get the conversational chain
     def get_conversational_chain():
-
         prompt_template = """
-        Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
-        provided context just say, "answer is not available in the context", don't provide the wrong answer\n\n
+        first this if the user ask for the summary give the summary from the text in point wise.
+        Answer the question as detailed as possible from the provided context. Make sure to provide all the details. If the answer is not in the provided context, just say, "answer is not available in the context", don't provide a wrong answer.\n\n
         Context:\n {context}?\n
         Question: \n{question}\n
-
         Answer:
         """
 
-        model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.5) #temperature is the randomness of the model
-
-        ##prompt template is from the langchain library
-        prompt = PromptTemplate(template = prompt_template, input_variables = ["context", "question"])
+        # Replace 'gemini-pro' with your actual Gemini model name
+        model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.5)  # Temperature controls randomness
+        prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
         return chain
 
-
-
+    # Process user input (user question)
     def user_input(user_question):
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-        new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-        docs = new_db.similarity_search(user_question)
-        chain = get_conversational_chain()
+        try:
+            embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+            new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+            docs = new_db.similarity_search(user_question)
+            chain = get_conversational_chain()
 
-        response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-        print(response)
-        st.write("Reply: ", response["output_text"])
+            response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+            st.write("Reply: ", response["output_text"])
+        except Exception as e:
+            st.error(f"Error in answering question: {e}")
 
-
-        #main
+    # Main function for the app
     def main():
-
-
-
         st.header("PDF se Padhai 📚")
 
         user_question = st.text_input("Ask any Question from the uploaded PDF Files")
@@ -177,19 +235,16 @@ def pdf_study_page():
                         raw_text = get_pdf_text(pdf_docs)
                         text_chunks = get_text_chunks(raw_text)
                         get_vector_store(text_chunks)
-                        st.success("Done")
-
-
+                        st.success("Processing Complete!")
 
     if __name__ == "__main__":
         main()
-
 
 #===========================================================================================================================
 # Page: Invoice Extractor
 def invoice_extractor_page():
 
-    model3=genai.GenerativeModel('gemini-pro-vision')
+    model3=genai.GenerativeModel('gemini-1.5-flash')
 
    #image means the image of the invoice  #user_prompt means the question asked by the user
     def get_gemini_response(input,image,user_prompt):  
@@ -247,7 +302,7 @@ def invoice_extractor_page():
 def img_to_text():
 
     def get_gemini_repsonse(input,image,prompt):
-        model12=genai.GenerativeModel('gemini-pro-vision')
+        model12=genai.GenerativeModel('gemini-1.5-flash')
         response=model12.generate_content([input,image[0],prompt])
         return response.text
 
@@ -286,7 +341,8 @@ def img_to_text():
     input_prompt="""
     Here use may upload handwritten or computer typed text image and you have to convert the text from the image to the text.
     and you have to provide the details of the text in the form of the text.
-    and you have to return the text in the form of the text.
+    and you have to return the text in the form of the text... and you have display the whole text first and 
+    then convert and translate the text into hindi language.
                 ----
                 ----
 
@@ -320,7 +376,7 @@ def pic_comparison():
             String containing the GenAI response, including analysis and recommendations.
         """
 
-        model5 = genai.GenerativeModel('gemini-pro-vision')
+        model5 = genai.GenerativeModel('gemini-1.5-flash')
         combined_prompt = input_prompt + caption_prompt + hashtag_prompt
         response = model5.generate_content([combined_prompt] + image_data)
         return response.text
@@ -365,24 +421,24 @@ def pic_comparison():
 # Page: Meal Detail
 def meal_detail_page():
 
-    def get_gemini_repsonse(input,image,prompt):
-        model4=genai.GenerativeModel('gemini-pro-vision')
-        response=model4.generate_content([input,image[0],prompt])
+    model3=genai.GenerativeModel('gemini-1.5-flash')
+
+   #image means the image of the invoice  #user_prompt means the question asked by the user
+    def get_gemini_response(input,image,user_prompt):  
+        response=model3.generate_content([input,image[0],user_prompt])
         return response.text
 
 
 
-
-    #conversion of image data to bytes
-    def input_image_setup(uploaded_file):
-        # Check if a file has been uploaded
+    #conversion of image data into bytes
+    def input_image_details(uploaded_file):
         if uploaded_file is not None:
             # Read the file into bytes
-            bytes_data = uploaded_file.getvalue()  # Read the file into bytes
+            bytes_data = uploaded_file.getvalue()
 
             image_parts = [
                 {
-                    "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
+                    "mime_type": uploaded_file.type,  # get the mime type of the uploaded file
                     "data": bytes_data
                 }
             ]
@@ -390,83 +446,81 @@ def meal_detail_page():
         else:
             raise FileNotFoundError("No file uploaded")
         
+    st.header("Meal Details 🍝")
+    st.write("Welcome to the Meal Details.")
+    st.write("You can ask any questions about the food and I will try to answer it.")
+    
+    input=st.text_input("Enter the query... ",key="input")
+    uploaded_file = st.file_uploader("Choose an image of the invoice...", type=["jpg", "jpeg", "png"])
 
-    st.header("Meal Details 🍔")
-    input=st.text_input("Enter the food related query.... ",key="input")
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-    image=""   
     if uploaded_file is not None:
-        image = Image.open(uploaded_file)
+        image=Image.open(uploaded_file)
         st.image(image, caption="Uploaded Image.", use_column_width=True)
 
-
-    submit=st.button("Tell me about it....")
+    submit=st.button("Tell me...")
 
     input_prompt="""
-    You are an expert in nutritionist where you need to see the food items from the image
-                and calculate the total calories, also provide the details of every food items with calories intake
-                is below format
-
-                1. Item 1 - no of calories
-                2. Item 2 - no of calories
-                ----
-                ----
-
-
+    You are an expert in understanding invoices. We will upload a a image as various food items, cuisines, dishes
+    and you will have to answer any questions based on the uploaded food image. User may ask what is 
+    the colorie, fat etc you need to answer it in tabular format. Atleast you have to detect the food items
+    and give a rough idea... please do this
     """
 
-    ## If submit button is clicked
+    ## if submit button is clicked
 
     if submit:
         if uploaded_file:
-            image_data=input_image_setup(uploaded_file)
-            response=get_gemini_repsonse(input_prompt,image_data,input)
-            st.subheader("The Response is")
+            image_data=input_image_details(uploaded_file)
+            response=get_gemini_response(input_prompt,image_data,input)
+            st.subheader("The Rresponse is")
             st.write(response)
         else:
-            st.write("Please upload the image to get the response, as the image is not uploaded.")
-
+            st.error("Please upload the meal image")
 
 #=====================================================================================================================
+## outfit maker
+
+import streamlit as st
+from PIL import Image
+import google.generativeai as genai
+
 def outfit_maker_page():
-    def get_gemini_repsonse(input,image,prompt):
-        model10=genai.GenerativeModel('gemini-pro-vision')
-        response=model10.generate_content([input,image[0],prompt])
+
+    def get_gemini_response(input, image, prompt):
+        model10 = genai.GenerativeModel('gemini-1.5-flash')  # Update model name
+        response = model10.generate_content([input, image[0], prompt])
         return response.text
 
-
-
-
-    #conversion of image data to bytes
     def input_image_setup(uploaded_file):
-        # Check if a file has been uploaded
         if uploaded_file is not None:
-            # Read the file into bytes
-            bytes_data = uploaded_file.getvalue()  # Read the file into bytes
-
-            image_parts = [
-                {
-                    "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
-                    "data": bytes_data
-                }
-            ]
-            return image_parts
+            try:
+                bytes_data = uploaded_file.getvalue()
+                image_parts = [
+                    {
+                        "mime_type": uploaded_file.type,
+                        "data": bytes_data
+                    }
+                ]
+                return image_parts
+            except Exception as e:
+                st.error(f"Error processing image: {e}")
+                return None  # Indicate error
         else:
             raise FileNotFoundError("No file uploaded")
 
     st.header("Outfit Maker 👕")
-    input=st.radio("Choose the input type",["Male", "Female", "Kid"])
-    input=st.text_input("Enter the outfit related query.... ",key="input")
+    input = st.radio("Choose the input type", ["Male", "Female", "Kid"])
+    input = st.text_input("Enter the outfit related query.... ", key="input")
     uploaded_file = st.file_uploader("Choose an image that constains you outfit (like top + bottom + footwear + other accessories. )...", type=["jpg", "jpeg", "png"])
-    image=""   
+    image = ""
+
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption="Uploaded Image.", use_column_width=True)
 
+    submit = st.button("Tell me about it....")
 
-    submit=st.button("Tell me about it....")
-
-    input_prompt="""
+    input_prompt = """
 
     You are an expert in fashion industry and you are a great fashion infuence where you need to see the outfit from the image and recommend the best suited color of pants with different shirts or foowears other other dress of men and womer in the image.
     You also have to provide the details of every outfit items with the color and brand of the outfit.
@@ -474,37 +528,39 @@ def outfit_maker_page():
     Use may enter the input section and may ask some questions related to outfit then you have to answer all of them..
     Also you have to recommend the improvement for the outfit.
     Also you have to response to the user query in the form of the outfit details.
-    you have to generate all the responses in the form of 
+    you have to generate all the responses in the form of
     if you found top then you have to provide the details of the top with color, brand, score and recommended for improvement.
     1. Item 1 - color - brand - score - recommended for improvement
     if you found bottom then you have to provide the details of the top with color, brand, score and recommended for improvement.
-    2. Item 2 - color - brand - score - recommended for improvement     
+    2. Item 2 - color - brand - score - recommended for improvement
     if you found footwear then you have to provide the details of the top with color, brand, score and recommended for improvement.
     3. Item 3 - color - brand - score - recommended for improvement
     if you found other accessories like watches jewellery etc then you have to provide the details of the top with color, brand, score and recommended for improvement.
     4. Item 4 - color - brand - score - recommended for improvement
     ----
-    ----        
+    ----
     And at last you have to give the overall score of the outfit based on the color combination and the brand of the outfit out of 10.
     And the best place suited for the clothing eg., wedding party, office, casual etc.
 
     """
 
-    ## If submit button is clicked
-
     if submit:
         if uploaded_file:
-            image_data=input_image_setup(uploaded_file)
-            response=get_gemini_repsonse(input_prompt,image_data,input)
-            st.subheader("The Response is")
-            st.write(response)
+            image_data = input_image_setup(uploaded_file)
+            try:
+                response = get_gemini_response(input_prompt, image_data, input)
+                st.subheader("The Response is")
+                st.write(response)
+            except Exception as e:
+                st.error(f"Error generating response: {e}")
         else:
             st.write("Please upload the image to get the response, as the image is not uploaded.")
-
 #=====================================================================================================================
+## aesthetic rating
+
 def aesthetic_rating_page():
     def get_gemini_repsonse(input,image,prompt):
-        model11=genai.GenerativeModel('gemini-pro-vision')
+        model11=genai.GenerativeModel('gemini-1.5-flash')
         response=model11.generate_content([input,image[0],prompt])
         return response.text
     
@@ -553,7 +609,7 @@ def aesthetic_rating_page():
     ----
     ----        
     At last of you have to tell how can model his her photoshoot image and aesthetic image eg., wedding party, office, casual etc.
-
+    please give rating in tabular format    
     """
 
     ## If submit button is clicked
@@ -636,9 +692,11 @@ def ats_score_check_page():
 # Page: YouTube se Padhai
 def youtube_study_page():
     
-    prompt="""You are Yotube video summarizer. You will be taking the transcript text
+    prompt="""You are Yotube video summarizer. You are provoded with various languages like english
+    hindi, tamil, bangali etc..You will be taking the transcript text
     and summarizing the entire video and providing the important summary in points
-    within 250 words. Please provide the summary of the text given here:  """
+    within 250 words. Please provide the summary of the text given here:... You need to provide summary either
+      in english or hindi language..  """
 
 
     ## getting the transcript data from yt videos
@@ -681,7 +739,7 @@ def youtube_study_page():
             st.write(summary)
 
 
-
+#-----------------------------------------------------------------------------------------------------------
 
 def about_the_author():
     author_name = "Rishi Ranjan"
@@ -711,9 +769,64 @@ Let's build, innovate, and explore the limitless possibilities of technology tog
     st.write(f"**Author:** {author_name}")
     st.write(author_description)
     
+#==================================================================================================
+import streamlit as st
+from PIL import Image
+import google.generativeai as genai
+
+def image_to_code_page():
+    # Function to generate code based on an image and selected code type
+    def get_code_from_image(image, code_type):
+        # Update the model to a version like "gemini-1.5-flash" or another generative AI
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        # Customize the prompt based on the selected code type
+        if code_type == "HTML/CSS/JavaScript/React":
+            prompt = "Generate a responsive webpage code (HTML, CSS, JavaScript, React) based on the contents of this image."
+        elif code_type == "Python/Tinkercad":
+            prompt = "Generate Python code or Tinkercad circuit design code based on the contents of this image."
+        elif code_type == "Kotlin":
+            prompt = "Generate a Kotlin application based on the contents of this image."
+        
+        # Generate the response
+        response = model.generate_content([prompt, image])
+        return response.text
+    
+    st.header("Image-to-Code Generator 🖼️➡️💻")
+    st.text("Upload an image and receive code in your chosen language or framework.")
+
+    # File uploader for the image
+    uploaded_file = st.file_uploader("Upload an image (jpg, png, etc.)", type=["jpg", "jpeg", "png"])
+
+    # Selectbox for code type selection
+    code_type = st.selectbox(
+        "Select the type of code to generate:",
+        ("HTML/CSS/JavaScript/React", "Kotlin")
+    )
+    
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
+
+        # Generate button to trigger code generation
+        generate_code = st.button("Generate Code")
+
+        if generate_code:
+            # Get the code from the image based on the selected code type
+            code_response = get_code_from_image(image, code_type)
+            st.subheader(f"Generated {code_type} Code")
+            
+            # Use st.code() for code block output, with language based on the selected type
+            if code_type == "HTML/CSS/JavaScript/React":
+                st.code(code_response, language="html")
+            
+            elif code_type == "Kotlin":
+                st.code(code_response, language="kotlin")
+    else:
+        st.write("Please upload an image to generate code.")
 
 
-
+#------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -731,11 +844,16 @@ pages = {
     "Invoice Extractor": invoice_extractor_page,
     "Meal Detail": meal_detail_page,
     "ATS Score Check": ats_score_check_page,
+    "Debug Code": debugger_page,
+    "Image to Code": image_to_code_page,
     "YouTube se Padhai": youtube_study_page,
     "Outfit Maker": outfit_maker_page,
     "Aesthetic Rating": aesthetic_rating_page,
     "Pic Comparision": pic_comparison,
+    # "Image Generation": image_generation_page,
     "About the Author": about_the_author,
+    "Debug Code": debugger_page,
+    
 }
 
 st.set_page_config(page_title="Student Vikaash",page_icon="1.png",layout="wide")
